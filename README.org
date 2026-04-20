@@ -8,12 +8,12 @@ nonguix
 #+begin_src scheme
 
    (cons (channel
-         (name 'mio-canale-personale)
+         (name 'boot-sector-launch)
          (url "https://github.com/Air4x/boot-sector-launch.git")
          (branch "main")
          (introduction
           (make-channel-introduction
-  	 "fb5c7f05324ec8228ea4e3ed3f0af7eda38a535d"					; L'hash del commit che contiene .guix-authorizations
+  	 "fb5c7f05324ec8228ea4e3ed3f0af7eda38a535d"
            (openpgp-fingerprint
             "F2FEFE669117674C003D55609BDFFC914D670025"))))
        %default-channels)
