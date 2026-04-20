@@ -10,7 +10,7 @@ nonguix
    (cons (channel
          (name 'boot-sector-launch)
          (url "https://github.com/Air4x/boot-sector-launch.git")
-         (branch "main")
+         (branch "master")
          (introduction
           (make-channel-introduction
   	 "fb5c7f05324ec8228ea4e3ed3f0af7eda38a535d"
