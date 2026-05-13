@@ -26,7 +26,7 @@
 (define-public zen-browser-bin
   (package
     (name "zen-browser-bin")
-    (version "1.19.10b")
+    (version "1.19.12b")
     (source
      (origin
        (method url-fetch)
@@ -35,7 +35,7 @@
              version
              "/zen.linux-x86_64.tar.xz"))
        (sha256
-        (base32 "0wxr50q4c2ppv9q55y9dmc35q190kkjidk7z5mphr3b3dbjn7fmg"))))
+        (base32 "0y83l1i12cbjbvvmlf81k1namjanscsggz6mzla5ar2i7a6bcvqm"))))
     (build-system copy-build-system)
     (arguments
      (list #:install-plan
