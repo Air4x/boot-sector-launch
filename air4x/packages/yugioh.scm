@@ -112,7 +112,9 @@
           (replace 'configure
             (lambda _
               (invoke "premake5" "gmake"
-		      "--pics=\"https://pics.projectignis.org:2096/pics/{}.jpg\"")))
+		      "--pics=\"https://pics.projectignis.org:2096/pics/{}.jpg\""
+		      "--covers=\"https://pics.projectignis.org:2096/pics/cover/{}.jpg\""
+		      "--fields=\"https://pics.projectignis.org:2096/pics/field/{}.png\"")))
           (replace 'build
             (lambda _
               (invoke "make"
