@@ -111,10 +111,7 @@
                  "removeflags \"LinkTimeOptimization\""))))
           (replace 'configure
             (lambda _
-              (invoke "premake5" "gmake"
-		      "--pics=\"https://pics.projectignis.org:2096/pics/{}.jpg\""
-		      "--covers=\"https://pics.projectignis.org:2096/pics/cover/{}.jpg\""
-		      "--fields=\"https://pics.projectignis.org:2096/pics/field/{}.png\"")))
+              (invoke "premake5" "gmake")))
           (replace 'build
             (lambda _
               (invoke "make"
@@ -197,7 +194,11 @@
 		      (replace 'configure
 			       (lambda _
 				 ;; Generate GNU Makefiles using premake5
-				 (invoke "premake5" "gmake" "--no-core" "--sound=sfml")))
+				 (invoke "premake5" "gmake"
+					 "--pics=\"https://pics.projectignis.org:2096/pics/{}.jpg\""
+					 "--covers=\"https://pics.projectignis.org:2096/pics/cover/{}.jpg\""
+					 "--fields=\"https://pics.projectignis.org:2096/pics/field/{}.png\""
+					 "--no-core" "--sound=sfml")))
 		      (delete 'patch-generated-file-shebangs)
 		      (replace 'build
 			       (lambda _
