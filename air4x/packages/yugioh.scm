@@ -111,7 +111,8 @@
                  "removeflags \"LinkTimeOptimization\""))))
           (replace 'configure
             (lambda _
-              (invoke "premake5" "gmake")))
+              (invoke "premake5" "gmake"
+		      "--pics=\"https://pics.projectignis.org:2096/pics/{}.jpg\"")))
           (replace 'build
             (lambda _
               (invoke "make"
@@ -134,122 +135,138 @@
     (description "Fork of OCG Core used in EDOpro.")
     (license license:agpl3+)))
 
+;; (define-public windbot-ignite
+;;   (package
+;;    (name "windbot-ignite")
+;;    (version "20250927")
+;;    (source
+;;     (origin
+;;      (method git-fetch)
+;;      (uri (git-reference
+;; 	   (url "https://github.com/ProjectIgnis/windbot")
+;; 	   (recursive? #f)
+;; 	   (commit version)))
+;;      (file-name (git-file-name name version))
+;;      (sha256
+;;       (base32 "1ixbl2ny1yj4k59qxpmm6m6k4davf1hrvw97nbv51b8n0f3g2rg2"))))
+;;    (build-system )))
+
 (define-public edopro
   (package
-    (name "edopro")
-    (version "41.0.2")
-    (source
-     (origin
-       (method git-fetch)
-       (uri (git-reference
-             (url "https://github.com/edo9300/edopro")
-             (recursive? #t)
-             (commit version)))
-       (file-name (git-file-name name version))
-       (sha256
-        (base32 "15lmav10r7nlvi6fmr488zp1s4nlppkipr0rz5kp6jzpvrd1fi36"))))
-    (build-system gnu-build-system)
-    (arguments
-     (list
-      #:phases
-      #~(modify-phases %standard-phases
-          ;; We remove lto and tell edopro where to get ocgcore
-          (add-after 'unpack 'disable-lto-and-patch-ocgcore
-            (lambda _
-              (substitute* "premake5.lua"
-                (("flags \"LinkTimeOptimization\"")
-                 "removeflags \"LinkTimeOptimization\""))
-              (substitute* "gframe/game.cpp"
-                (("ocgcore = LoadOCGcore\\(Utils::GetWorkingDirectory\\(\\)\\)")
-                 (string-append "ocgcore = LoadOCGcore(\""
-                                #$edo-ocgcore "/lib/\")")))))
+   (name "edopro")
+   (version "41.0.2")
+   (source
+    (origin
+     (method git-fetch)
+     (uri (git-reference
+           (url "https://github.com/edo9300/edopro")
+           (recursive? #t)
+           (commit version)))
+     (file-name (git-file-name name version))
+     (sha256
+      (base32 "15lmav10r7nlvi6fmr488zp1s4nlppkipr0rz5kp6jzpvrd1fi36"))))
+   (build-system gnu-build-system)
+   (arguments
+    (list
+     #:phases
+     #~(modify-phases %standard-phases
+		      ;; We remove lto and tell edopro where to get ocgcore
+		      (add-after 'unpack 'disable-lto-and-patch-ocgcore
+				 (lambda _
+				   (substitute* "premake5.lua"
+						(("flags \"LinkTimeOptimization\"")
+						 "removeflags \"LinkTimeOptimization\""))
+				   (substitute* "gframe/game.cpp"
+						(("ocgcore = LoadOCGcore\\(Utils::GetWorkingDirectory\\(\\)\\)")
+						 (string-append "ocgcore = LoadOCGcore(\""
+								#$edo-ocgcore "/lib/\")")))))
 
-          (add-before 'configure 'set-irrlicht-path
-            (lambda _
-              ;; Modifies CPLUS_INCLUDE_PATH to find irrlicht headers
-              (setenv "CPLUS_INCLUDE_PATH"
-                      (string-append (getenv "CPLUS_INCLUDE_PATH") ":"
-                                     #$edo-irrlicht "/include/irrlicht"))))
-          (add-after 'set-irrlicht-path 'set-freetype-path
-            (lambda _
-              (setenv "CPLUS_INCLUDE_PATH"
-                      (string-append (getenv "CPLUS_INCLUDE_PATH") ":"
-                                     #$freetype "/include/freetype2"))))
-          (replace 'configure
-            (lambda _
-              ;; Generate GNU Makefiles using premake5
-              (invoke "premake5" "gmake" "--no-core" "--sound=sfml")))
-          (delete 'patch-generated-file-shebangs)
-          (replace 'build
-            (lambda _
-              ;; Use a specific Makefile
-              (invoke "make"
-                      "config=release_x64"
-                      "-j"
-                      (number->string (parallel-job-count))
-                      "-C"
-                      "build"
-                      "ygoprodll")))
-          (delete 'check)
-          (replace 'install
-            (lambda _
-              (let* ((out #$output)
-                     (bin (string-append out "/bin"))
-                     (share (string-append out "/share/edopro")))
-                ;; target directory
-                (mkdir-p bin)
-                (mkdir-p share)
-                ;; copying the executable in share
-                (install-file "bin/x64/release/ygoprodll" share)
-                (for-each (lambda (item)
-                            (when (file-exists? item)
-                              (if (file-is-directory? item)
-                                  (copy-recursively item
-                                                    (string-append share "/"
-                                                                   item))
-                                  (copy-file item
-                                             (string-append share "/" item)))))
-                          '("sfAudio" "config" "notices" "sound" "textures"))
-                (let ((wrapper (string-append bin "/edopro")))
-                  (with-output-to-file wrapper
-                    (lambda ()
-                      (format #t "#!/bin/sh~%")
-                      (format #t
-                       "DATA_DIR=\"${XDG_DATA_HOME:-$HOME/.local/share}/edopro\"~%")
-                      (format #t "if [ ! -d \"$DATA_DIR/fonts\" ]; then~%")
-                      (format #t "  echo \"=== MISSING ASSET ===\"~%")
-                      (format #t
-                       "  echo \"1. Download the last release from Project Ignisd.\"~%")
-                      (format #t "  echo \"2. untar the .tar.gz\"~%")
-                      (format #t
-                       "  echo \"3. Move all the content in: $DATA_DIR\"~%")
-                      (format #t "  echo \"restart the program.\"~%")
-                      (format #t "  mkdir -p \"$DATA_DIR\"~%")
-                      (format #t "  exit 1~%")
-                      (format #t "fi~%")
-                      (format #t "exec ~a/ygoprodll -C $DATA_DIR \"$@\"~%"
-                              share)))
-                  (chmod wrapper #o555))))))))
-    (native-inputs (list premake5 lua pkg-config))
-    (inputs (list edo-irrlicht
-                  sqlite
-                  libevent
-                  curl
-                  libgit2
-                  fmt
-                  nlohmann-json
-                  glu
-                  freetype
-                  libssh2
-                  mesa
-                  sfml
-                  xz
-                  edo-ocgcore))
-    (home-page "https://projectignis.github.io/")
-    (synopsis "Bleeding edge duel emulator")
-    (description
-     "EDOpro is a modern duel emulator. To make it work you need to download
-the release from GitHub and copy all the assets in $DATA)_DIR, which
+		      (add-before 'configure 'set-irrlicht-path
+				  (lambda _
+				    ;; Modifies CPLUS_INCLUDE_PATH to find irrlicht headers
+				    (setenv "CPLUS_INCLUDE_PATH"
+					    (string-append (getenv "CPLUS_INCLUDE_PATH") ":"
+							   #$edo-irrlicht "/include/irrlicht"))))
+		      (add-after 'set-irrlicht-path 'set-freetype-path
+				 (lambda _
+				   (setenv "CPLUS_INCLUDE_PATH"
+					   (string-append (getenv "CPLUS_INCLUDE_PATH") ":"
+							  #$freetype "/include/freetype2"))))
+		      (replace 'configure
+			       (lambda _
+				 ;; Generate GNU Makefiles using premake5
+				 (invoke "premake5" "gmake" "--no-core" "--sound=sfml")))
+		      (delete 'patch-generated-file-shebangs)
+		      (replace 'build
+			       (lambda _
+				 ;; Use a specific Makefile
+				 (invoke "make"
+					 "config=release_x64"
+					 "-j"
+					 (number->string (parallel-job-count))
+					 "-C"
+					 "build"
+					 "ygoprodll")))
+		      (delete 'check)
+		      (replace 'install
+			       (lambda _
+				 (let* ((out #$output)
+					(bin (string-append out "/bin"))
+					(share (string-append out "/share/edopro")))
+				   ;; target directory
+				   (mkdir-p bin)
+				   (mkdir-p share)
+				   ;; copying the executable in share
+				   (install-file "bin/x64/release/ygoprodll" share)
+				   (for-each (lambda (item)
+					       (when (file-exists? item)
+						 (if (file-is-directory? item)
+						     (copy-recursively item
+								       (string-append share "/"
+										      item))
+						     (copy-file item
+								(string-append share "/" item)))))
+					     '("sfAudio" "config" "notices" "sound" "textures"))
+				   (let ((wrapper (string-append bin "/edopro")))
+				     (with-output-to-file wrapper
+				       (lambda ()
+					 (format #t "#!/bin/sh~%")
+					 (format #t
+						 "DATA_DIR=\"${XDG_DATA_HOME:-$HOME/.local/share}/edopro\"~%")
+					 (format #t "if [ ! -d \"$DATA_DIR/fonts\" ]; then~%")
+					 (format #t "  echo \"=== MISSING ASSET ===\"~%")
+					 (format #t
+						 "  echo \"1. Download the last release from Project Ignisd.\"~%")
+					 (format #t "  echo \"2. untar the .tar.gz\"~%")
+					 (format #t
+						 "  echo \"3. Move all the content in: $DATA_DIR\"~%")
+					 (format #t "  echo \"restart the program.\"~%")
+					 (format #t "  mkdir -p \"$DATA_DIR\"~%")
+					 (format #t "  exit 1~%")
+					 (format #t "fi~%")
+					 (format #t "exec ~a/ygoprodll -C $DATA_DIR \"$@\"~%"
+						 share)))
+				     (chmod wrapper #o555))))))))
+   (native-inputs (list premake5 lua pkg-config))
+   (inputs (list edo-irrlicht
+                 sqlite
+                 libevent
+                 curl
+                 libgit2
+                 fmt
+                 nlohmann-json
+                 glu
+                 freetype
+                 libssh2
+                 mesa
+                 sfml
+                 xz
+                 edo-ocgcore))
+   (home-page "https://projectignis.github.io/")
+   (synopsis "Bleeding edge duel emulator")
+   (description
+    "EDOpro is a modern duel emulator. To make it work you need to download
+the release from GitHub and copy all the assets in $DATA_DIR, which
 is defined as ${XDG_DATA_DIR:-$HOME/.local/share}edopro.")
-    (license license:agpl3+)))
+   (license license:agpl3+)))
 
